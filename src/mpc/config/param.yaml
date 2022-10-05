@@ -1,0 +1,20 @@
+mpc:
+  du_threshold: 0.001
+  dt: 0.01
+  max_iter: 150
+  # control v
+  predict_steps: 60
+  delay_num: 10
+  max_omega: 2.3
+  max_domega: 3.0
+  max_speed: 1.5
+  min_speed: -1.5
+  max_accel: 0.3
+  in_test: false
+  in_mocap: false
+  control_a: false
+  # x, y, v yaw
+  # control v
+  matrix_q: [50.0, 50.0, 2.5, 0.5]
+  matrix_r: [0.1, 0.01]
+  matrix_rd: [2.0, 3.0]

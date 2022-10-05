@@ -1,0 +1,66 @@
+<launch>
+
+    <arg name="drone_id" value="0"/>
+    <arg name="max_height" value="0.64"/>
+    <arg name="min_height" value="0.48"/>
+    <arg name="odom_topic" value="/ekf/ekf_odom" />
+    <arg name="use_l_planner" value="false" />
+    <arg name="use_sim" default="true" />
+    <arg name="cmd_topic" value="diablo_cmd" />
+    
+    <!-- mpc controller -->   
+    <rosparam command="load" file="$(find mpc)/config/param.yaml" />
+    
+    <node pkg="mpc" name="mpc_controller_node" type="mpc_controller_node" output="screen">
+      <remap from="cmd" to="$(arg cmd_topic)"/>
+      <remap from="odom" to="$(arg odom_topic)"/>
+      <remap from="traj" to="/ugv_planner_node/trajectory"/>
+    </node>
+
+    <!--main planner-->
+    <node pkg="ugv_planner" name="ugv_planner_node" type="ugv_planner_node" output="screen">
+      <param name="max_height" value="$(arg max_height)" />
+      <param name="use_replan" value="true" />
+      <param name="use_l_planner" value="$(arg use_l_planner)" />
+      <param name="plan_horizon" value="3.0" />
+
+      <remap from="~trajectory_topic" to="/ugv_planner_node/trajectory"/>
+      <remap from="global_map" to="/global_map"/>
+      <remap from="~odom" to="$(arg odom_topic)"/>
+      <param name="optimization/rhoT" value="10"/>
+      <param name="optimization/rhoP" value="100000"/>
+      <param name="optimization/rhoV" value="100000"/>
+      <param name="optimization/rhoA" value="100000"/>
+      <!-- <param name="optimization/rhoP" value="100000"/> -->
+      <!-- <param name="optimization/rhoV" value="1000"/> -->
+      <!-- <param name="optimization/rhoA" value="1000"/> -->
+      <param name="optimization/vmax" value="0.8"/>
+      <param name="optimization/amax" value="0.2"/>
+      <!-- <param name="optimization/vmax" value="4.0"/> -->
+      <!-- <param name="optimization/amax" value="6.0"/> -->
+      <param name="optimization/vmaxz" value="0.2"/>
+      <param name="optimization/amaxz" value="0.4"/>
+      <param name="optimization/pause_debug" value="false"/>
+
+    </node>
+    <!-- use simulator -->
+
+  <group if="$(arg use_sim)">
+    <include file="$(find ugv_planner)/launch/simulator.xml">
+        <arg name="max_height" value="$(arg max_height)" />
+        <arg name="min_height" value="$(arg min_height)" />
+        <arg name="init_x_" value="0.0"/> 
+        <arg name="init_y_" value="0.0"/>
+        <arg name="init_z_" value="0.0"/>
+        <arg name="odometry_topic" value="$(arg odom_topic)" />
+        <arg name="cmd_topic" value="$(arg cmd_topic)"/>
+    </include>
+  </group>
+
+    <!--simulate global map-->
+    <include file="$(find globalmap_generator)/launch/tmap_gene.launch">
+      <arg name="use_l_planner" value="$(arg use_l_planner)" />
+    </include>
+    <!-- rviz -->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ugv_planner)/param/default.rviz" required="true" />
+</launch>
