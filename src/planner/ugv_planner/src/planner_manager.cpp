@@ -25,8 +25,7 @@ namespace ugv_planner
 
     now_pos = now_vel = now_acc = Eigen::Vector3d(0,0,0);
 
-    global_map_manager.reset(new LanGridMapManager);
-    global_map_manager->init(nh);
+    robo_map_manager.reset(new MapManager);
     minco_traj_optimizer.reset(new TrajOpt());
 
     ROS_INFO("trajectory planner is ready."); 
@@ -52,8 +51,8 @@ namespace ugv_planner
     }
 
     minco_traj_optimizer -> setParam(nh);
-    minco_traj_optimizer -> setEnvironment(global_map_manager);
-    global_map_manager -> setParam(nh);
+    minco_traj_optimizer -> setEnvironment(robo_map_manager);
+    robo_map_manager -> initMap(nh);
     vis_render.init(nh);
   }
 
@@ -91,8 +90,6 @@ namespace ugv_planner
     target_pos(2) = 0;
     vis_render.visTarget(target);
 
-    cout<< "g = " << global_map_manager -> getGapByPosW3(target_pos) <<endl;
-    
     ros::Time t1 = ros::Time::now();
     if (globalReplan())
     {
@@ -203,7 +200,6 @@ namespace ugv_planner
     else
     {
       start_pos = now_pos;
-      start_pos(2) = global_map_manager -> getGapByPosW3(start_pos);
       start_v = now_vel;
       start_v(2) = 0.0;
       start_a = Eigen::Vector3d::Zero();
@@ -256,16 +252,12 @@ namespace ugv_planner
 
   bool UGVPlannerManager::generateMincoTraj(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, Eigen::Vector3d start_a, Eigen::Vector3d end_pt, vector<Eigen::Vector3d> path)
   {
-    start_pt(2) = global_map_manager -> getGapByPosW3(start_pt);
-    end_pt(2)   = global_map_manager -> getGapByPosW3(end_pt);
     return generateMincoTraj(start_pt, start_v, start_a, end_pt, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(), path);
   }
 
   bool UGVPlannerManager::generateMincoTraj(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, Eigen::Vector3d start_a, Eigen::Vector3d end_pt, Eigen::Vector3d end_v, Eigen::Vector3d end_a, vector<Eigen::Vector3d> path)
   {
     Eigen::MatrixXd initS, finalS;
-    // start_pt(2) = global_map_manager -> getGapByPosW3(start_pt);
-    // end_pt(2)   = global_map_manager -> getGapByPosW3(end_pt);
 
     initS.setZero(3, 3);
     initS.col(0) = start_pt;
@@ -284,11 +276,10 @@ namespace ugv_planner
     double dt = 0.001;
     double mileage = 0.0 , lastwp_mileage = 0.0;
 
-    int di = space_resolution / global_map_manager -> p_grid_resolution;
+    int di = space_resolution / robo_map_manager -> getResolution().first;
     for(int i = path.size() - 1 ; i >= 0 ; i -= di)
     {
         pos = path[i];
-        pos(2) = global_map_manager -> getGapByPosW3(pos);
         waypoints.push_back(pos);
     }
     waypoints.push_back(end_pt);
@@ -320,7 +311,7 @@ namespace ugv_planner
 
   bool UGVPlannerManager::globalReplan()
   {
-    vector<Eigen::Vector3d> path_0 = global_map_manager -> AstarPathSearch(now_pos, target_pos);
+    vector<Eigen::Vector3d> path_0 = robo_map_manager -> frontEndSearch(now_pos, target_pos);
     vis_render.renderPoints(path_0, Eigen::Vector3d(0.6,0.6,0.1),0, 0.05, 1);
 
     if (path_0.size() > 0)
@@ -339,8 +330,8 @@ namespace ugv_planner
   }
 
   bool UGVPlannerManager::localReplan(Eigen::Vector3d start_pos, Eigen::Vector3d start_v, Eigen::Vector3d start_a, Eigen::Vector3d local_target, Eigen::Vector3d end_v, Eigen::Vector3d end_a)
-  {
-    vector<Eigen::Vector3d> path_0 = global_map_manager -> AstarPathSearch( start_pos, local_target);
+  { 
+    vector<Eigen::Vector3d> path_0 = robo_map_manager -> frontEndSearch( start_pos, local_target);
     vis_render.renderPoints(path_0, Eigen::Vector3d(0.6,0.6,0.1),0, 0.05, 1);
 
     if (path_0.size() > 0)

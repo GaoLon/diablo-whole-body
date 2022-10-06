@@ -8,7 +8,7 @@
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float64MultiArray.h>
-#include "grid_map/global_map_manager.h"
+#include "robo_map/robo_map_manager.h"
 #include <ros/ros.h>
 #include <ugv_planner/traj_visualization.h>
 #include <minco_opt/traj_opt.h>
@@ -73,7 +73,7 @@ namespace ugv_planner
     Trajectory local_trajectory;
   public:
 
-    LanGridMapManager::Ptr global_map_manager;
+    MapManager::Ptr robo_map_manager;
 
   };
 } 

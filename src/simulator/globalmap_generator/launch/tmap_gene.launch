@@ -5,7 +5,6 @@
     <remap from="/global_map" to="/global_map"/>
     <param name="map_id" value="7" />
     <param name="pcd_path" type="string" value="$(find globalmap_generator)/PCDFiles/out.pcd" />
-    <param name="use_l_planner" value="$(arg use_l_planner)" />
  </node>
 
  <!--node name="rviz" pkg="rviz" type="rviz" args="-d $(find globalmap_generator)/launch/default.rviz" required="true" /-->

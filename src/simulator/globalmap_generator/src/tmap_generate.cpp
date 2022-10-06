@@ -11,23 +11,15 @@
 #include <time.h>
 #include <string>
 
-ros::Publisher global_map_pub, global_map_vis_pub;
+ros::Publisher global_map_pub;
 
 double offset_x = 0.00;
 double offset_y = 0.00;
 
 double cloud_resolution = 0.1;
 std::string file;
-bool use_l_planner;
-
-
 
 pcl::PointCloud<pcl::PointXYZ>    global_map_pcl_cloud , global_map_vis_pcl_cloud;
-
-void initParams()
-{
-
-}
 
 void geneWall(double ori_x , double ori_y , double length, double width,double height)
 {
@@ -391,62 +383,30 @@ void pubGlobalMap(int id)
 {
     pcl::PointXYZ                     s_point;
     sensor_msgs::PointCloud2          global_map_cloud, global_map_vis_cloud;
-    if(!use_l_planner){
-        // if(id == 1){ map1Gene(); }
-        // else if(id == 2){ map2Gene(); }
-        // else if(id == 3){ map3Gene(); }
-        // else if(id == 4){ map4Gene(); }
-        // else if(id == 5){ map5Gene(); }
-        // else if(id == 6){ map6Gene(); }
-        // else if(id == 7){ map7Gene(); }
-        // else{map1Gene();}
+    
+    // if(id == 1){ map1Gene(); }
+    // else if(id == 2){ map2Gene(); }
+    // else if(id == 3){ map3Gene(); }
+    // else if(id == 4){ map4Gene(); }
+    // else if(id == 5){ map5Gene(); }
+    // else if(id == 6){ map6Gene(); }
+    // else if(id == 7){ map7Gene(); }
+    // else{map1Gene();}
 
-        pcl::PCDReader reader;  
-        reader.read<pcl::PointXYZ>(file,global_map_pcl_cloud);
-        for (size_t i=0; i<global_map_pcl_cloud.size(); i++)
-        {
-            global_map_pcl_cloud[i].z+=0.1;
-            global_map_pcl_cloud[i].x+=5.0;
-            global_map_pcl_cloud[i].y+=1.5;
-        }
-
-        pcl::toROSMsg(global_map_pcl_cloud, global_map_cloud);
-        global_map_cloud.header.frame_id = "world";
-        global_map_pub.publish(global_map_cloud);
-        
-        ROS_INFO("global map published! ");
-
-        pcl::toROSMsg(global_map_vis_pcl_cloud, global_map_vis_cloud);
-        global_map_vis_cloud.header.frame_id = "world";
-        global_map_vis_pub.publish(global_map_vis_cloud);
-        
-        ROS_INFO("global map vis published! ");
+    pcl::PCDReader reader;  
+    reader.read<pcl::PointXYZ>(file,global_map_pcl_cloud);
+    for (size_t i=0; i<global_map_pcl_cloud.size(); i++)
+    {
+        global_map_pcl_cloud[i].z+=0.1;
+        global_map_pcl_cloud[i].x+=5.0;
+        global_map_pcl_cloud[i].y+=1.5;
     }
-    else{
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloudMap(new pcl::PointCloud<pcl::PointXYZ>);
-        if (pcl::io::loadPCDFile<pcl::PointXYZ>("/home/gs/whole_body_ws/global_map0317.pcd", *cloudMap )== -1)
-        {
-                PCL_ERROR("Couldn't read pcd file\n");
-                return;
-        }
-        cloudMap->width = cloudMap->points.size();
-        cloudMap->height = 1;
-        cloudMap->is_dense = true;
 
-        // pcl::toROSMsg(global_map_pcl_cloud, global_map_cloud);
-        pcl::toROSMsg(*cloudMap, global_map_cloud);
-        global_map_cloud.header.frame_id = "world";
-        global_map_pub.publish(global_map_cloud);
-        
-        ROS_INFO("global map published! ");
-
-        // pcl::toROSMsg(global_map_vis_pcl_cloud, global_map_vis_cloud);
-        pcl::toROSMsg(*cloudMap, global_map_vis_cloud);
-        global_map_vis_cloud.header.frame_id = "world";
-        global_map_vis_pub.publish(global_map_vis_cloud);
-        
-        ROS_INFO("global map vis published! ");
-    }
+    pcl::toROSMsg(global_map_pcl_cloud, global_map_cloud);
+    global_map_cloud.header.frame_id = "world";
+    global_map_pub.publish(global_map_cloud);
+    
+    ROS_INFO("global map published! ");
 }
 
 int main (int argc, char** argv) 
@@ -455,15 +415,10 @@ int main (int argc, char** argv)
     ros::NodeHandle nh("~"); 
 
     global_map_pub      = nh.advertise<sensor_msgs::PointCloud2>("/global_map", 5); 
-    global_map_vis_pub  = nh.advertise<sensor_msgs::PointCloud2>("/global_map_vis", 5); 
 
     int map_id;
     nh.param("map_id", map_id, 1);
     nh.param("pcd_path", file, std::string("scans.pcd"));
-
-    nh.param("use_l_planner", use_l_planner, false);
-
-    std::cout<<"map id = "<<map_id<<std::endl;
 
     int t = 3;
     while(t--)

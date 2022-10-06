@@ -1,5 +1,4 @@
-#include <minco_opt/traj_opt.h>
-
+#include "minco_opt/traj_opt.h"
 #include <minco_opt/lbfgs_raw.hpp>
 
 namespace ugv_planner {
@@ -254,21 +253,23 @@ bool TrajOpt::grad_cost_p(const Eigen::Vector3d& p,
   gradp = Eigen::Vector3d::Zero();
 
 
-  esdf = grid_map_manager -> calcESDF_Cost(p);
-  gp   = grid_map_manager -> calcESDF_Grid(p);
+  // esdf = grid_map_manager -> calcESDF_Cost(p);
+  // gp   = grid_map_manager -> calcESDF_Grid(p);
+  Eigen::Vector4d p4(p(0), p(1), p(2), 0.0);
+  grid_map_manager->getDistWithGrad(p4, esdf, gp);
 
-  grid_map_manager -> calcZ_CostGrad(p,z_cost ,z_grid);
+  // grid_map_manager -> calcZ_CostGrad(p,z_cost ,z_grid);
   costp +=  rhoP_tmp_ * z_cost;
   gradp +=  rhoP_tmp_ * z_grid;
 
-  if ( esdf > grid_map_manager -> truncation_distance || esdf == 0 )
+  if ( esdf > 0.0 || esdf == 0 )
   {
     return true;
   }
   else
   {    
-    costp +=  rhoP_tmp_ * pow(grid_map_manager -> truncation_distance - esdf, 3);
-    gradp +=  rhoP_tmp_ * 3 * pow(grid_map_manager -> truncation_distance - esdf, 2) * gp;
+    costp +=  rhoP_tmp_ * pow(0.0 - esdf, 3);
+    gradp +=  rhoP_tmp_ * 3 * pow(0.0 - esdf, 2) * gp;
 
     return true;
   }

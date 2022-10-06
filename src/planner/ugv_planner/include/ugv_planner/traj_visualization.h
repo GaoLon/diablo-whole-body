@@ -3,7 +3,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
-#include "grid_map/global_map_manager.h"
+#include "robo_map/robo_map_manager.h"
 #include <Eigen/Eigen>
 
 #include <minco_opt/poly_traj_utils.hpp>

@@ -1,5 +1,5 @@
 #pragma once
-#include <grid_map/global_map_manager.h>
+#include <robo_map/robo_map_manager.h>
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 
@@ -16,7 +16,7 @@ class TrajOpt {
   ros::NodeHandle nh_;
   ros::Publisher debug_pub, debug_wp_pub;
 
-  LanGridMapManager::Ptr grid_map_manager;
+  MapManager::Ptr grid_map_manager;
   bool pause_debug_ = true;
   // # pieces and # key points
   int N_, K_, dim_t_, dim_p_;
@@ -81,7 +81,7 @@ class TrajOpt {
     debug_wp_pub = nh.advertise<visualization_msgs::Marker>("/traj_opt/debug_path_wp", 10);
 
   }
-  void setEnvironment(const LanGridMapManager::Ptr& mapPtr)
+  void setEnvironment(const MapManager::Ptr& mapPtr)
   {
       grid_map_manager = mapPtr;
   }

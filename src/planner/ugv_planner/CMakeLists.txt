@@ -17,15 +17,16 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   visualization_msgs
   # cv_bridge
-  grid_map
+  robo_map
   mpc
 )
 
 catkin_package(
  INCLUDE_DIRS include
  DEPENDS Eigen Boost
- CATKIN_DEPENDS grid_map mpc
+ CATKIN_DEPENDS robo_map mpc
 )
+
 include_directories( 
     SYSTEM 
     include 
