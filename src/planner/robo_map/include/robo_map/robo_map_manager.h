@@ -8,6 +8,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl_conversions/pcl_conversions.h>
 #include <string.h>
 
 #define inf 1>>20
@@ -37,13 +40,15 @@ namespace ugv_planner
             Eigen::Vector4i voxel_num;
             double resolution, resolution_inv;
             double h_resolution, h_resolution_inv;
+            double leaf_size;
             double h2_r2;
 
             vector<char> robo_buffer;
             vector<double> tmp_buffer1, tmp_buffer2;
             vector<double> esdf_buffer_inv;
             vector<double> esdf_buffer_all;
-            pcl::PointCloud<pcl::PointXYZ> env_cloud;
+            pcl::PointCloud<pcl::PointXYZ>::Ptr env_cloud;
+            pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
 
         public:
             MapManager();
@@ -56,6 +61,7 @@ namespace ugv_planner
             inline bool isInMap(const Eigen::Vector4i& idx);
             inline int isOccupancy(Eigen::Vector4d pos);
             inline int isOccupancy(Eigen::Vector4i id);
+            inline bool isStateFree(Eigen::Vector4d state);
             inline void boundIndex(Eigen::Vector4i& id);
             inline pair<double, double> getResolution(void);
             inline void getDistWithGrad(const Eigen::Vector4d& pos, double& dist, Eigen::Vector3d& grad);
@@ -66,7 +72,7 @@ namespace ugv_planner
             void fillESDF(F_get_val f_get_val, F_set_val f_set_val, int start, int end, int dim);
             void visCallback(const ros::TimerEvent& /*event*/);
             void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud);
-            vector<Eigen::Vector3d> frontEndSearch(Eigen::Vector3d start_pos, Eigen::Vector3d end_pos);
+            vector<Eigen::Vector3d> hybridAstarSearch(Eigen::Vector3d start_pos, Eigen::Vector3d end_pos);
             typedef shared_ptr<MapManager> Ptr;
     };
 
@@ -146,6 +152,36 @@ namespace ugv_planner
             return -1;
 
         return int(robo_buffer[toAddress(id)]);
+    }
+
+    inline bool MapManager::isStateFree(Eigen::Vector4d state)
+    {
+        pcl::PointXYZ pointSearch;
+        std::vector<int> pointIdx;
+        std::vector<float> pointSquaredDistance;
+
+        pointSearch.x = state[0];
+        pointSearch.y = state[1];
+        pointSearch.z = (0.48 + state[3])/2;
+        kdtree.radiusSearch(pointSearch, 0.5, pointIdx, pointSquaredDistance);
+
+        for (size_t i=0; i<pointIdx.size(); i++)
+        {
+            Eigen::Matrix2d R;
+            R << cos(state[2]) , sin(state[2]), \
+                 -sin(state[2]), cos(state[2]); 
+            Eigen::Vector4d p(env_cloud->points[i].x, \
+                              env_cloud->points[i].y, \
+                              env_cloud->points[i].z, state[3]);
+            p.block<2, 1>(0, 0) = R * (p.head(2) - state.head(2));
+            // std::cout<<"p="<<p.transpose();
+            if (isOccupancy(p) == 1)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     inline void MapManager::boundIndex(Eigen::Vector4i& id)

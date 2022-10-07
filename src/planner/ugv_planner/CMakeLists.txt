@@ -16,15 +16,15 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   visualization_msgs
-  # cv_bridge
   robo_map
+  front_end
   mpc
 )
 
 catkin_package(
  INCLUDE_DIRS include
  DEPENDS Eigen Boost
- CATKIN_DEPENDS robo_map mpc
+ CATKIN_DEPENDS robo_map mpc front_end
 )
 
 include_directories( 

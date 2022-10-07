@@ -29,19 +29,19 @@
 
       <param name="robomap/resolution" value="0.02"/>
       <param name="robomap/h_resolution" value="0.02"/>
+      <param name="robomap/leaf_size" value="0.01"/>
       <param name="robomap/debug_h" value="0.08"/>
+
+      <param name="ompl/map_size_x" value="12.0"/>
+      <param name="ompl/map_size_y" value="12.0"/>
+      <param name="ompl/map_size_z" value="2.0"/>
 
       <param name="optimization/rhoT" value="10"/>
       <param name="optimization/rhoP" value="100000"/>
       <param name="optimization/rhoV" value="100000"/>
       <param name="optimization/rhoA" value="100000"/>
-      <!-- <param name="optimization/rhoP" value="100000"/> -->
-      <!-- <param name="optimization/rhoV" value="1000"/> -->
-      <!-- <param name="optimization/rhoA" value="1000"/> -->
       <param name="optimization/vmax" value="0.8"/>
       <param name="optimization/amax" value="0.2"/>
-      <!-- <param name="optimization/vmax" value="4.0"/> -->
-      <!-- <param name="optimization/amax" value="6.0"/> -->
       <param name="optimization/vmaxz" value="0.2"/>
       <param name="optimization/amaxz" value="0.4"/>
       <param name="optimization/pause_debug" value="false"/>

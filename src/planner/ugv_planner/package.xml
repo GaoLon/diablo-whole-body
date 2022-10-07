@@ -20,6 +20,7 @@
   <build_depend>rospy</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>robo_map</build_depend>
+  <build_depend>front_end</build_depend>
   <build_depend>mpc</build_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
@@ -28,6 +29,7 @@
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>robo_map</exec_depend>
+  <exec_depend>front_end</exec_depend>
   <exec_depend>mpc</exec_depend>
   <!--depend>plan_env</depend-->
   <!-- The export tag contains other, unspecified, tags -->

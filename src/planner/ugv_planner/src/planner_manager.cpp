@@ -9,8 +9,8 @@ const double pi = 3.1415926535;
 
 namespace ugv_planner
 {
-  UGVPlannerManager::UGVPlannerManager() {
-
+  UGVPlannerManager::UGVPlannerManager() 
+  {
     has_odom = false;
     has_target = false;
     first_plan = true;
@@ -27,6 +27,7 @@ namespace ugv_planner
 
     robo_map_manager.reset(new MapManager);
     minco_traj_optimizer.reset(new TrajOpt());
+    ompl_manager.reset(new OMPLPlanner());
 
     ROS_INFO("trajectory planner is ready."); 
   }
@@ -54,6 +55,10 @@ namespace ugv_planner
     minco_traj_optimizer -> setEnvironment(robo_map_manager);
     robo_map_manager -> initMap(nh);
     vis_render.init(nh);
+
+    ompl_manager->setParam(nh);
+    ompl_manager->setEnvironment(robo_map_manager);
+    ompl_manager->init();
   }
 
   void UGVPlannerManager::trigRcvCallback(const std_msgs::Bool trig)
@@ -311,7 +316,15 @@ namespace ugv_planner
 
   bool UGVPlannerManager::globalReplan()
   {
-    vector<Eigen::Vector3d> path_0 = robo_map_manager -> frontEndSearch(now_pos, target_pos);
+    Eigen::Vector4d begin_p, target_p;
+    begin_p.block<2, 1>(0, 0) = now_pos.head(2);
+    target_p.block<2, 1>(0, 0) = target_pos.head(2);
+    begin_p(2) = target_p(2) = 0.0;
+    begin_p(3) = target_p(3) = 0.16;
+    vector<Eigen::Vector4d> front_end_path = ompl_manager->plan(begin_p, target_p);
+    
+    vector<Eigen::Vector3d> path_0 = robo_map_manager -> hybridAstarSearch(now_pos, target_pos);
+
     vis_render.renderPoints(path_0, Eigen::Vector3d(0.6,0.6,0.1),0, 0.05, 1);
 
     if (path_0.size() > 0)
@@ -331,7 +344,7 @@ namespace ugv_planner
 
   bool UGVPlannerManager::localReplan(Eigen::Vector3d start_pos, Eigen::Vector3d start_v, Eigen::Vector3d start_a, Eigen::Vector3d local_target, Eigen::Vector3d end_v, Eigen::Vector3d end_a)
   { 
-    vector<Eigen::Vector3d> path_0 = robo_map_manager -> frontEndSearch( start_pos, local_target);
+    vector<Eigen::Vector3d> path_0 = robo_map_manager -> hybridAstarSearch( start_pos, local_target);
     vis_render.renderPoints(path_0, Eigen::Vector3d(0.6,0.6,0.1),0, 0.05, 1);
 
     if (path_0.size() > 0)

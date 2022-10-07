@@ -6,7 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Odometry1/Shape1
-        - /robo_field1
       Splitter Ratio: 0.5
     Tree Height: 728
   - Class: rviz/Selection
@@ -93,7 +92,7 @@ Visualization Manager:
       Marker Topic: /ugv_planner_node/target/vis
       Name: target
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -236,6 +235,14 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /ompl_rrt/wholebody_marker
+      Name: whole_body_path
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -261,7 +268,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 14.870694160461426
+      Distance: 16.568126678466797
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -269,17 +276,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 5.452653408050537
-        Y: 5.214102745056152
-        Z: -8.746861457824707
+        X: 5.808996200561523
+        Y: -0.41449931263923645
+        Z: 0.24584229290485382
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8897969722747803
+      Pitch: 0.7047971487045288
       Target Frame: <Fixed Frame>
-      Yaw: 3.7893104553222656
+      Yaw: 4.229347229003906
     Saved: ~
 Window Geometry:
   Displays:
@@ -298,4 +305,4 @@ Window Geometry:
     collapsed: true
   Width: 1853
   X: 606
-  Y: 2683
+  Y: 2609

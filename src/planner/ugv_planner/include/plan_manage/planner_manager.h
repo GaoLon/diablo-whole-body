@@ -8,7 +8,8 @@
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float64MultiArray.h>
-#include "robo_map/robo_map_manager.h"
+#include <robo_map/robo_map_manager.h>
+#include <front_end/ompl_planner_mannager.h>
 #include <ros/ros.h>
 #include <ugv_planner/traj_visualization.h>
 #include <minco_opt/traj_opt.h>
@@ -61,11 +62,11 @@ namespace ugv_planner
     bool back;
     bool mpc_trigger;
 
-    geometry_msgs::PoseStamped    target;        //the global target
-    Eigen::Vector3d               target_pos;    // = target
-    Eigen::Vector3d               now_pos;       // = rt_odometry
-    Eigen::Vector3d               now_vel;       // = rt_odometry'
-    Eigen::Vector3d               now_acc;       // = rt_odometry''
+    geometry_msgs::PoseStamped    target;        
+    Eigen::Vector3d               target_pos;    
+    Eigen::Vector3d               now_pos;
+    Eigen::Vector3d               now_vel;
+    Eigen::Vector3d               now_acc;
 
     unique_ptr<TrajOpt> minco_traj_optimizer;
     Trajectory final_trajectory;
@@ -74,7 +75,7 @@ namespace ugv_planner
   public:
 
     MapManager::Ptr robo_map_manager;
-
+    OMPLPlanner::Ptr ompl_manager;
   };
 } 
 

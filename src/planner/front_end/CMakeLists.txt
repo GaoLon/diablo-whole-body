@@ -1,30 +1,26 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(robo_map)
+project(front_end)
 
 set(CMAKE_BUILD_TYPE "Release")
 ADD_COMPILE_OPTIONS(-std=c++11 )
 ADD_COMPILE_OPTIONS(-std=c++14 )
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
-# find_package(OpenCV REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  sensor_msgs
-  geometry_msgs
-  message_filters
-  tf
+  robo_map
+  visualization_msgs
 )
 
+find_package(ompl REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(PCL 1.10 REQUIRED)
 
 catkin_package(
  INCLUDE_DIRS include
- LIBRARIES robo_map
- CATKIN_DEPENDS roscpp rospy std_msgs tf 
-#  DEPENDS system_lib
+ LIBRARIES front_end
+ CATKIN_DEPENDS roscpp rospy std_msgs robo_map visualization_msgs
 )
 
 include_directories( 
@@ -32,18 +28,15 @@ include_directories(
     include 
     ${catkin_INCLUDE_DIRS}
     ${Eigen3_INCLUDE_DIRS} 
-    ${PCL_INCLUDE_DIRS}
+    ${OMPL_INCLUDE_DIRS}
 )
 
-link_directories(${PCL_LIBRARY_DIRS})
-
-add_library( robo_map 
-    src/robo_map_manager.cpp
+add_library( front_end 
+    src/ompl_planner_manager.cpp
     )
 
-target_link_libraries( robo_map
+target_link_libraries( front_end
     ${catkin_LIBRARIES} 
-    ${PCL_LIBRARIES}
-    ${PCL_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
+    ${OMPL_LIBRARIES}
     )

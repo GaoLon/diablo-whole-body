@@ -5,7 +5,7 @@ namespace ugv_planner
 {
     MapManager::MapManager(): \
         map_size(Eigen::Vector4d(0.8, 0.9, 0.8, 1.08)),\
-        has_esdf(false)
+        has_esdf(false), env_cloud(new pcl::PointCloud<pcl::PointXYZ>)
     { 
         min_boundary = -map_size / 2.0;
         max_boundary = map_size / 2.0;
@@ -22,6 +22,7 @@ namespace ugv_planner
         nh = node_;
         node_.param("robomap/resolution", resolution, -1.0);       
         node_.param("robomap/h_resolution", h_resolution, -1.0);
+        node_.param("robomap/leaf_size", leaf_size, -1.0);
         node_.param("robomap/debug_h", debug_h, 100.0);
         vis_timer = node_.createTimer(ros::Duration(1.0), &MapManager::visCallback, this);
         esdf_pub  = node_.advertise<sensor_msgs::PointCloud2>("robo_esdf", 10);
@@ -83,7 +84,20 @@ namespace ugv_planner
     {
         if (!has_cloud)
         {
-            pcl::fromROSMsg(*cloud, env_cloud);
+            pcl::PointCloud<pcl::PointXYZ>::Ptr cloudMap(new pcl::PointCloud<pcl::PointXYZ>);
+            pcl::VoxelGrid<pcl::PointXYZ> DwzFilter;
+        
+            pcl::fromROSMsg(*cloud, *cloudMap);
+            DwzFilter.setLeafSize(leaf_size, leaf_size, leaf_size);
+            DwzFilter.setInputCloud(cloudMap);
+            DwzFilter.filter(*env_cloud);
+            cloudMap->clear();
+
+            // pcl::fromROSMsg(*cloud, *env_cloud);
+
+            kdtree.setInputCloud(env_cloud);
+
+            ROS_INFO("get point clouds.");
             has_cloud = true;
         }
 
@@ -245,7 +259,7 @@ namespace ugv_planner
         return;
     }
 
-    vector<Eigen::Vector3d> MapManager::frontEndSearch(Eigen::Vector3d start_pos, Eigen::Vector3d end_pos)
+    vector<Eigen::Vector3d> MapManager::hybridAstarSearch(Eigen::Vector3d start_pos, Eigen::Vector3d end_pos)
     {
         vector<Eigen::Vector3d> path;
         return path;
