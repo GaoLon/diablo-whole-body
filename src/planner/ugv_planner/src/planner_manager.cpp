@@ -316,12 +316,22 @@ namespace ugv_planner
 
   bool UGVPlannerManager::globalReplan()
   {
-    Eigen::Vector4d begin_p, target_p;
+    // Eigen::Vector4d begin_p, target_p;
+    // begin_p.block<2, 1>(0, 0) = now_pos.head(2);
+    // // target_p.block<2, 1>(0, 0) = target_pos.head(2);
+    // target_p(0) = 8.0;
+    // target_p(1) = -2.0;
+    // begin_p(2) = target_p(2) = 0.0;
+    // begin_p(3) = target_p(3) = 0.16;
+    // vector<Eigen::Vector4d> front_end_path = ompl_manager->plan(begin_p, target_p);
+
+    Eigen::Matrix<double, 5, 1> begin_p, target_p;
     begin_p.block<2, 1>(0, 0) = now_pos.head(2);
     target_p.block<2, 1>(0, 0) = target_pos.head(2);
     begin_p(2) = target_p(2) = 0.0;
-    begin_p(3) = target_p(3) = 0.16;
-    vector<Eigen::Vector4d> front_end_path = ompl_manager->plan(begin_p, target_p);
+    begin_p(3) = target_p(3) = 0.0;
+    begin_p(4) = target_p(4) = 0.0;
+    vector<Eigen::Vector4d> front_end_path = ompl_manager->kinoPlan(begin_p, target_p);
     
     vector<Eigen::Vector3d> path_0 = robo_map_manager -> hybridAstarSearch(now_pos, target_pos);
 

@@ -5,7 +5,8 @@ namespace ugv_planner
 {
     MapManager::MapManager(): \
         map_size(Eigen::Vector4d(0.8, 0.9, 0.8, 1.08)),\
-        has_esdf(false), env_cloud(new pcl::PointCloud<pcl::PointXYZ>)
+        has_esdf(false), env_cloud(new pcl::PointCloud<pcl::PointXYZ>),\
+        world_size(Eigen::Vector3d(18.0, 8.0, 2.0)), world_resolution(0.02)
     { 
         min_boundary = -map_size / 2.0;
         max_boundary = map_size / 2.0;
@@ -14,6 +15,13 @@ namespace ugv_planner
         min_boundary(3) = -0.5;
         max_boundary(3) = min_boundary(3) + map_size(3);
         map_origin = min_boundary;
+        
+        world_resolution_inv = 1.0 / world_resolution;
+        world_origin = world_min_boundary = -world_size / 2.0;
+        world_max_boundary = world_size / 2.0;
+        for (size_t i=0; i<3; i++)
+            world_voxel_num(i) = ceil(world_size(i) / world_resolution);
+        world_buffer = vector<char>(world_voxel_num(0) * world_voxel_num(1) * world_voxel_num(2), 0);
     }
 
     void MapManager::initMap(ros::NodeHandle& node_) 
@@ -96,6 +104,17 @@ namespace ugv_planner
             // pcl::fromROSMsg(*cloud, *env_cloud);
 
             kdtree.setInputCloud(env_cloud);
+            for (size_t i=0; i<env_cloud->points.size(); i++)
+            {
+                Eigen::Vector3d p(env_cloud->points[i].x, env_cloud->points[i].y, env_cloud->points[i].z);
+                Eigen::Vector3i idx;
+
+                posToIndexWorld(p, idx);
+
+                if (!isInMapWorld(idx)) continue;
+
+                world_buffer[toAddressWorld(idx)] = 1;
+            }
 
             ROS_INFO("get point clouds.");
             has_cloud = true;

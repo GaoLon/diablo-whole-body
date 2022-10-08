@@ -13,6 +13,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <string.h>
 
+// #define AABB
 #define inf 1>>20
 using namespace std;
 
@@ -31,6 +32,7 @@ namespace ugv_planner
             double          debug_h;
             int             debug_h_idx;
 
+            // robo map param and data
             Eigen::Vector4d map_origin;
             Eigen::Vector4d map_size;
             Eigen::Vector4d min_boundary;
@@ -47,21 +49,32 @@ namespace ugv_planner
             vector<double> tmp_buffer1, tmp_buffer2;
             vector<double> esdf_buffer_inv;
             vector<double> esdf_buffer_all;
+
+            // world map param and data
+            Eigen::Vector3d world_origin;
+            Eigen::Vector3d world_size;
+            Eigen::Vector3d world_min_boundary;
+            Eigen::Vector3d world_max_boundary;
+            Eigen::Vector3i world_voxel_num;
+            double world_resolution, world_resolution_inv;
+            vector<char> world_buffer;
             pcl::PointCloud<pcl::PointXYZ>::Ptr env_cloud;
             pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
 
         public:
             MapManager();
             ~MapManager() {}
+            // robo map function
             inline void posToIndex(const Eigen::Vector4d& pos, Eigen::Vector4i& id);
             inline void indexToPos(const Eigen::Vector4i& id, Eigen::Vector4d& pos);
             inline int toAddress(const Eigen::Vector4i& id);
             inline int toAddress(const int& x, const int& y, const int& z, const int& h);
             inline bool isInMap(const Eigen::Vector4d& pos);
             inline bool isInMap(const Eigen::Vector4i& idx);
-            inline int isOccupancy(Eigen::Vector4d pos);
-            inline int isOccupancy(Eigen::Vector4i id);
-            inline bool isStateFree(Eigen::Vector4d state);
+            inline int isOccupancy(const Eigen::Vector4d& pos);
+            inline int isOccupancy(const Eigen::Vector4i& id);
+            inline bool isStateFree(const Eigen::Vector4d& state);
+            inline bool isHStateFree(const Eigen::Vector3d& state, double& h);
             inline void boundIndex(Eigen::Vector4i& id);
             inline pair<double, double> getResolution(void);
             inline void getDistWithGrad(const Eigen::Vector4d& pos, double& dist, Eigen::Vector3d& grad);
@@ -73,6 +86,17 @@ namespace ugv_planner
             void visCallback(const ros::TimerEvent& /*event*/);
             void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud);
             vector<Eigen::Vector3d> hybridAstarSearch(Eigen::Vector3d start_pos, Eigen::Vector3d end_pos);
+
+            // world map function
+            inline void posToIndexWorld(const Eigen::Vector3d& pos, Eigen::Vector3i& id);
+            inline void indexToPosWorld(const Eigen::Vector3i& id, Eigen::Vector3d& pos);
+            inline int toAddressWorld(const Eigen::Vector3i& id);
+            inline int toAddressWorld(const int& x, const int& y, const int& z);
+            inline bool isInMapWorld(const Eigen::Vector3d& pos);
+            inline bool isInMapWorld(const Eigen::Vector3i& idx);
+            inline int isOccupancyWorld(const Eigen::Vector3d& pos);
+            inline int isOccupancyWorld(const Eigen::Vector3i& id);
+
             typedef shared_ptr<MapManager> Ptr;
     };
 
@@ -137,7 +161,7 @@ namespace ugv_planner
         return true;
     }
 
-    inline int MapManager::isOccupancy(Eigen::Vector4d pos)
+    inline int MapManager::isOccupancy(const Eigen::Vector4d& pos)
     {
         Eigen::Vector4i id;
 
@@ -146,7 +170,7 @@ namespace ugv_planner
         return isOccupancy(id);
     }
 
-    inline int MapManager::isOccupancy(Eigen::Vector4i id)
+    inline int MapManager::isOccupancy(const Eigen::Vector4i& id)
     {
         if (!isInMap(id))
             return -1;
@@ -154,22 +178,70 @@ namespace ugv_planner
         return int(robo_buffer[toAddress(id)]);
     }
 
-    inline bool MapManager::isStateFree(Eigen::Vector4d state)
+    inline bool MapManager::isStateFree(const Eigen::Vector4d& state)
     {
+#ifdef AABB
+        // use AABB algorithm
+        vector<Eigen::Vector3d> points;
+        Eigen::Vector3d robot_center(0.0, 0.0, (0.48+state[3])/2.0);
+        Eigen::Vector3d robot_cube(0.22, 0.28, robot_center[2]+0.02);
+        for (int i=-1; i<2; i+=2)
+            for (int j=-1; j<2; j+=2)
+                for (int k=-1; k<2; k+=2)
+                {
+                    points.push_back(robot_center + Eigen::Vector3d\
+                                    (robot_cube[0]*i, robot_cube[1]*j, robot_cube[2]*k));
+                }
+
+        Eigen::Matrix2d R;
+        R << cos(state[2]) ,-sin(state[2]), \
+             sin(state[2]) ,cos(state[2]) ;
+        Eigen::Vector2d t(state[0], state[1]);
+        for (size_t i=0; i<8; i++)
+        {
+            points[i].block<2, 1>(0, 0) = R*points[i].head(2) + t; 
+        }
+        
+        Eigen::Vector3d AABBmin(1e4, 1e4, 1e4), AABBmax(-1e4, -1e4, -1e4);
+        Eigen::Vector3i AABBmin_idx, AABBmax_idx;
+        for (size_t i=0; i<8; i++)
+        {
+            for (size_t j=0; j<3; j++)
+            {
+                if (points[i][j] < AABBmin[j])
+                    AABBmin[j] = points[i][j];
+                if (points[i][j] > AABBmax[j]);
+                    AABBmax[j] = points[i][j];
+            }
+        }
+        posToIndexWorld(AABBmin, AABBmin_idx);
+        posToIndexWorld(AABBmax, AABBmax_idx);
+        for (int i=AABBmin_idx(0); i<=AABBmax_idx(0); i++)
+            for (int j=AABBmin_idx(1); j<=AABBmax_idx(1); j++)
+                for (int k=AABBmin_idx(2); k<=AABBmax_idx(2); k++)
+                {
+                    Eigen::Vector3i idx(i, j, k);
+                    if (isOccupancyWorld(idx)==1)
+                    {
+                        return false;
+                    }
+                }
+#else
+        // using kd-tree search
         pcl::PointXYZ pointSearch;
         std::vector<int> pointIdx;
         std::vector<float> pointSquaredDistance;
 
         pointSearch.x = state[0];
         pointSearch.y = state[1];
-        pointSearch.z = (0.48 + state[3])/2;
+        pointSearch.z = (0.48 + state[3])/2.0;
         kdtree.radiusSearch(pointSearch, 0.5, pointIdx, pointSquaredDistance);
 
+        Eigen::Matrix2d R;
+        R << cos(state[2]) , sin(state[2]), \
+             -sin(state[2]), cos(state[2]);
         for (size_t i=0; i<pointIdx.size(); i++)
         {
-            Eigen::Matrix2d R;
-            R << cos(state[2]) , sin(state[2]), \
-                 -sin(state[2]), cos(state[2]); 
             Eigen::Vector4d p(env_cloud->points[i].x, \
                               env_cloud->points[i].y, \
                               env_cloud->points[i].z, state[3]);
@@ -180,7 +252,12 @@ namespace ugv_planner
                 return false;
             }
         }
+#endif
+        return true;
+    }
 
+    inline bool MapManager::isHStateFree(const Eigen::Vector3d& state, double& h)
+    {
         return true;
     }
 
@@ -257,6 +334,79 @@ namespace ugv_planner
         grad[0] *= resolution_inv;
 
         return;
+    }
+
+    inline void MapManager::posToIndexWorld(const Eigen::Vector3d& pos, Eigen::Vector3i& id)
+    {
+        for (int i = 0; i < 3; ++i) id(i) = floor((pos(i) - world_origin(i)) * world_resolution_inv);
+    }
+
+    inline void MapManager::indexToPosWorld(const Eigen::Vector3i& id, Eigen::Vector3d& pos)
+    {
+        for (int i = 0; i < 3; ++i) pos(i) = (id(i) + 0.5) * world_resolution_inv + world_origin(i);
+    }
+
+    inline int MapManager::toAddressWorld(const Eigen::Vector3i& id)
+    {
+        return id(0) * world_voxel_num(1)*world_voxel_num(2) + id(1) * world_voxel_num(2) + id(2);
+    }
+
+    inline int MapManager::toAddressWorld(const int& x, const int& y, const int& z)
+    {
+        return x * world_voxel_num(1)*world_voxel_num(2) + y * world_voxel_num(2) + z;
+    }
+
+    inline bool MapManager::isInMapWorld(const Eigen::Vector3d& pos)
+    {
+        if (pos(0) < world_min_boundary(0) + 1e-4 || \
+            pos(1) < world_min_boundary(1) + 1e-4 || \
+            pos(2) < world_min_boundary(2) + 1e-4     ) 
+        {
+            return false;
+        }
+
+        if (pos(0) > world_max_boundary(0) + 1e-4 || \
+            pos(1) > world_max_boundary(1) + 1e-4 || \
+            pos(2) > world_max_boundary(2) + 1e-4     ) 
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    inline bool MapManager::isInMapWorld(const Eigen::Vector3i& idx)
+    {
+        if (idx(0) < 0 || idx(1) < 0 || idx(2) < 0)
+        {
+            return false;
+        }
+
+        if (idx(0) > world_voxel_num(0) - 1 || \
+            idx(1) > world_voxel_num(1) - 1 || \
+            idx(2) > world_voxel_num(2) - 1     ) 
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    inline int MapManager::isOccupancyWorld(const Eigen::Vector3d& pos)
+    {
+        Eigen::Vector3i id;
+
+        posToIndexWorld(pos, id);
+            
+        return isOccupancyWorld(id);
+    }
+
+    inline int MapManager::isOccupancyWorld(const Eigen::Vector3i& id)
+    {
+        if (!isInMapWorld(id))
+            return -1;
+
+        return int(world_buffer[toAddressWorld(id)]);
     }
     
 };
