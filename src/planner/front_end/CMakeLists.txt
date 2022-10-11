@@ -33,6 +33,7 @@ include_directories(
 
 add_library( front_end 
     src/ompl_planner_manager.cpp
+    src/kino_astar.cpp
     )
 
 target_link_libraries( front_end

@@ -10,6 +10,7 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <robo_map/robo_map_manager.h>
 #include <front_end/ompl_planner_mannager.h>
+#include <front_end/kino_astar.h>
 #include <ros/ros.h>
 #include <ugv_planner/traj_visualization.h>
 #include <minco_opt/traj_opt.h>
@@ -76,6 +77,7 @@ namespace ugv_planner
 
     MapManager::Ptr robo_map_manager;
     OMPLPlanner::Ptr ompl_manager;
+    KinoAstar::Ptr kino_astar_manager;
   };
 } 
 

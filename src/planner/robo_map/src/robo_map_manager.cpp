@@ -22,6 +22,7 @@ namespace ugv_planner
         for (size_t i=0; i<3; i++)
             world_voxel_num(i) = ceil(world_size(i) / world_resolution);
         world_buffer = vector<char>(world_voxel_num(0) * world_voxel_num(1) * world_voxel_num(2), 0);
+        plane_buffer = vector<char>(world_voxel_num(0) * world_voxel_num(1), 0);
     }
 
     void MapManager::initMap(ros::NodeHandle& node_) 
@@ -49,7 +50,7 @@ namespace ugv_planner
         max_idx = voxel_num - Eigen::Vector4i::Ones();
 
         // init buffer
-        int buffer_size = voxel_num(0) * voxel_num(1) * voxel_num(2) * voxel_num(3);
+        int buffer_size  = voxel_num(0) * voxel_num(1) * voxel_num(2) * voxel_num(3);
         robo_buffer      = vector<char>(buffer_size, 0);
         esdf_buffer_inv  = vector<double>(buffer_size, 10000);
         esdf_buffer_all  = vector<double>(buffer_size, 10000);
@@ -277,10 +278,5 @@ namespace ugv_planner
         ROS_INFO("robo esdf build down.");
         return;
     }
-
-    vector<Eigen::Vector3d> MapManager::hybridAstarSearch(Eigen::Vector3d start_pos, Eigen::Vector3d end_pos)
-    {
-        vector<Eigen::Vector3d> path;
-        return path;
-    }
+    
 }

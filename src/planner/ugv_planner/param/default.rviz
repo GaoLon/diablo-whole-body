@@ -238,7 +238,15 @@ Visualization Manager:
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /ompl_rrt/wholebody_marker
-      Name: whole_body_path
+      Name: ompl_path
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /kino_astar/wholebody_marker
+      Name: kino_astar_path
       Namespaces:
         {}
       Queue Size: 100
@@ -268,7 +276,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 16.568126678466797
+      Distance: 18.506105422973633
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -284,9 +292,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7047971487045288
+      Pitch: 1.3097965717315674
       Target Frame: <Fixed Frame>
-      Yaw: 4.229347229003906
+      Yaw: 4.279348373413086
     Saved: ~
 Window Geometry:
   Displays:
@@ -305,4 +313,4 @@ Window Geometry:
     collapsed: true
   Width: 1853
   X: 606
-  Y: 2609
+  Y: 2572

@@ -50,17 +50,6 @@ namespace ugv_planner
             vector<double> esdf_buffer_inv;
             vector<double> esdf_buffer_all;
 
-            // world map param and data
-            Eigen::Vector3d world_origin;
-            Eigen::Vector3d world_size;
-            Eigen::Vector3d world_min_boundary;
-            Eigen::Vector3d world_max_boundary;
-            Eigen::Vector3i world_voxel_num;
-            double world_resolution, world_resolution_inv;
-            vector<char> world_buffer;
-            pcl::PointCloud<pcl::PointXYZ>::Ptr env_cloud;
-            pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-
         public:
             MapManager();
             ~MapManager() {}
@@ -79,21 +68,34 @@ namespace ugv_planner
             inline pair<double, double> getResolution(void);
             inline void getDistWithGrad(const Eigen::Vector4d& pos, double& dist, Eigen::Vector3d& grad);
             void initMap(ros::NodeHandle& nh);
-            void interPolate(double values[2][2][2][2], const Eigen::Vector4d& diff, double& value, Eigen::Vector3d& grad);
             void buildESDF(void);
             template <typename F_get_val, typename F_set_val>
             void fillESDF(F_get_val f_get_val, F_set_val f_set_val, int start, int end, int dim);
             void visCallback(const ros::TimerEvent& /*event*/);
             void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud);
-            vector<Eigen::Vector3d> hybridAstarSearch(Eigen::Vector3d start_pos, Eigen::Vector3d end_pos);
 
-            // world map function
+            // world and 2.5D map param and data
+            Eigen::Vector3d world_origin;
+            Eigen::Vector3d world_size;
+            Eigen::Vector3d world_min_boundary;
+            Eigen::Vector3d world_max_boundary;
+            Eigen::Vector3i world_voxel_num;
+            double world_resolution, world_resolution_inv;
+            vector<char> world_buffer;
+            vector<char> plane_buffer;
+            pcl::PointCloud<pcl::PointXYZ>::Ptr env_cloud;
+            pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+            
+            // world and 2.5D map function
             inline void posToIndexWorld(const Eigen::Vector3d& pos, Eigen::Vector3i& id);
+            inline Eigen::Vector2i posToIndexPlane(const Eigen::Vector2d& pos);
             inline void indexToPosWorld(const Eigen::Vector3i& id, Eigen::Vector3d& pos);
             inline int toAddressWorld(const Eigen::Vector3i& id);
             inline int toAddressWorld(const int& x, const int& y, const int& z);
             inline bool isInMapWorld(const Eigen::Vector3d& pos);
             inline bool isInMapWorld(const Eigen::Vector3i& idx);
+            inline bool isInMapPlane(const Eigen::Vector3d& pos);
+            inline bool isInMapPlane(const Eigen::Vector3i& idx);
             inline int isOccupancyWorld(const Eigen::Vector3d& pos);
             inline int isOccupancyWorld(const Eigen::Vector3i& id);
 
@@ -258,6 +260,7 @@ namespace ugv_planner
 
     inline bool MapManager::isHStateFree(const Eigen::Vector3d& state, double& h)
     {
+        // TODO
         return true;
     }
 
@@ -341,6 +344,15 @@ namespace ugv_planner
         for (int i = 0; i < 3; ++i) id(i) = floor((pos(i) - world_origin(i)) * world_resolution_inv);
     }
 
+    inline Eigen::Vector2i MapManager::posToIndexPlane(const Eigen::Vector2d& pos)
+    {
+        Eigen::Vector2i id;
+
+        for (int i = 0; i < 2; ++i) id(i) = floor((pos(i) - world_origin(i)) * world_resolution_inv);
+
+        return id;
+    }
+
     inline void MapManager::indexToPosWorld(const Eigen::Vector3i& id, Eigen::Vector3d& pos)
     {
         for (int i = 0; i < 3; ++i) pos(i) = (id(i) + 0.5) * world_resolution_inv + world_origin(i);
@@ -385,6 +397,39 @@ namespace ugv_planner
         if (idx(0) > world_voxel_num(0) - 1 || \
             idx(1) > world_voxel_num(1) - 1 || \
             idx(2) > world_voxel_num(2) - 1     ) 
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    inline bool MapManager::isInMapPlane(const Eigen::Vector3d& pos)
+    {
+        if (pos(0) < world_min_boundary(0) + 1e-4 || \
+            pos(1) < world_min_boundary(1) + 1e-4     ) 
+        {
+            return false;
+        }
+
+        if (pos(0) > world_max_boundary(0) + 1e-4 || \
+            pos(1) > world_max_boundary(1) + 1e-4     ) 
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    inline bool MapManager::isInMapPlane(const Eigen::Vector3i& idx)
+    {
+        if (idx(0) < 0 || idx(1) < 0)
+        {
+            return false;
+        }
+
+        if (idx(0) > world_voxel_num(0) - 1 || \
+            idx(1) > world_voxel_num(1) - 1     ) 
         {
             return false;
         }
