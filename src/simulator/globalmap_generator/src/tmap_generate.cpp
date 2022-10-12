@@ -397,7 +397,7 @@ void pubGlobalMap(int id)
     reader.read<pcl::PointXYZ>(file,global_map_pcl_cloud);
     for (size_t i=0; i<global_map_pcl_cloud.size(); i++)
     {
-        global_map_pcl_cloud[i].z+=0.1;
+        global_map_pcl_cloud[i].z = std::max(global_map_pcl_cloud[i].z+0.2f, 0.0f);
         global_map_pcl_cloud[i].x+=5.0;
         global_map_pcl_cloud[i].y+=1.5;
     }
@@ -406,7 +406,7 @@ void pubGlobalMap(int id)
     global_map_cloud.header.frame_id = "world";
     global_map_pub.publish(global_map_cloud);
     
-    ROS_INFO("global map published! ");
+    // ROS_INFO("global map published! ");
 }
 
 int main (int argc, char** argv) 
@@ -421,7 +421,8 @@ int main (int argc, char** argv)
     nh.param("pcd_path", file, std::string("scans.pcd"));
 
     int t = 3;
-    while(t--)
+    while(t-->0)
+    // while(ros::ok())
     {
         pubGlobalMap(map_id);
         ros::Duration(1.0).sleep();

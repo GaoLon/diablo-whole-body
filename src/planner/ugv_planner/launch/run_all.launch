@@ -26,10 +26,11 @@
       <param name="max_height" value="$(arg max_height)" />
       <param name="use_replan" value="false" />
       <param name="plan_horizon" value="3.0" />
+      <param name="front_end_type" value="1" />
 
       <param name="robomap/resolution" value="0.02"/>
       <param name="robomap/h_resolution" value="0.02"/>
-      <param name="robomap/leaf_size" value="0.01"/>
+      <param name="robomap/leaf_size" value="0.02"/>
       <param name="robomap/debug_h" value="0.08"/>
 
       <param name="ompl/map_size_x" value="12.0"/>

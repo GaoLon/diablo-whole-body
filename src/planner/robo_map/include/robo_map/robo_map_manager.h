@@ -25,6 +25,7 @@ namespace ugv_planner
             ros::NodeHandle nh;
             ros::Publisher  esdf_pub;
             ros::Publisher  field_pub;
+            ros::Publisher  world_pub;
             ros::Subscriber cloud_sub;
             ros::Timer      vis_timer;
             bool            has_esdf;
@@ -195,9 +196,97 @@ namespace ugv_planner
                                     (robot_cube[0]*i, robot_cube[1]*j, robot_cube[2]*k));
                 }
 
-        Eigen::Matrix2d R;
+        Eigen::Matrix2d R, RT;
         R << cos(state[2]) ,-sin(state[2]), \
              sin(state[2]) ,cos(state[2]) ;
+        RT = R.transpose();
+        Eigen::Vector2d t(state[0], state[1]);
+        for (size_t i=0; i<8; i++)
+        {
+            points[i].block<2, 1>(0, 0) = R*points[i].head(2) + t; 
+        }
+        
+        Eigen::Vector3d AABBmin(1e4, 1e4, 1e4), AABBmax(-1e4, -1e4, -1e4);
+        Eigen::Vector3i AABBmin_idx, AABBmax_idx;
+        for (size_t i=0; i<8; i++)
+        {
+            for (size_t j=0; j<3; j++)
+            {
+                if (points[i][j] < AABBmin[j])
+                    AABBmin[j] = points[i][j];
+                if (points[i][j] > AABBmax[j]);
+                    AABBmax[j] = points[i][j];
+            }
+        }
+
+        posToIndexWorld(AABBmin, AABBmin_idx);
+        posToIndexWorld(AABBmax, AABBmax_idx);
+        for (int i=AABBmin_idx(0); i<=AABBmax_idx(0); i++)
+            for (int j=AABBmin_idx(1); j<=AABBmax_idx(1); j++)
+                for (int k=AABBmin_idx(2); k<=AABBmax_idx(2); k++)
+                {
+                    Eigen::Vector3i idx(i, j, k);
+                    Eigen::Vector3d pos;
+                    if (isOccupancyWorld(idx) == 1)
+                    {
+                        indexToPosWorld(idx, pos);
+                        Eigen::Vector4d p(pos[0], pos[1], pos[2], state[3]);
+                        p.block<2, 1>(0, 0) = RT * (p.head(2) - t);
+                        if (isOccupancy(p) == 1)
+                        {
+                            return false;
+                        }
+                    }
+                    
+                }
+#else
+        // using kd-tree search
+        pcl::PointXYZ pointSearch;
+        std::vector<int> pointIdx;
+        std::vector<float> pointSquaredDistance;
+
+        pointSearch.x = state[0];
+        pointSearch.y = state[1];
+        pointSearch.z = (0.48 + state[3])/2.0;
+        kdtree.radiusSearch(pointSearch, 0.5, pointIdx, pointSquaredDistance);
+
+        Eigen::Matrix2d R;
+        R << cos(state[2]) , sin(state[2]), \
+             -sin(state[2]), cos(state[2]);
+        for (size_t i=0; i<pointIdx.size(); i++)
+        {
+            Eigen::Vector4d p(env_cloud->points[pointIdx[i]].x, \
+                              env_cloud->points[pointIdx[i]].y, \
+                              env_cloud->points[pointIdx[i]].z, state[3]);
+            p.block<2, 1>(0, 0) = R * (p.head(2) - state.head(2));
+            if (isOccupancy(p) == 1)
+            {
+                return false;
+            }
+        }
+#endif
+        return true;
+    }
+
+    inline bool MapManager::isHStateFree(const Eigen::Vector3d& state, double& h)
+    {
+#ifdef AABB
+        // use AABB algorithm
+        vector<Eigen::Vector3d> points;
+        Eigen::Vector3d robot_center(0.0, 0.0, 0.32);
+        Eigen::Vector3d robot_cube(0.22, 0.28, robot_center[2]+0.02);
+        for (int i=-1; i<2; i+=2)
+            for (int j=-1; j<2; j+=2)
+                for (int k=-1; k<2; k+=2)
+                {
+                    points.push_back(robot_center + Eigen::Vector3d\
+                                    (robot_cube[0]*i, robot_cube[1]*j, robot_cube[2]*k));
+                }
+
+        Eigen::Matrix2d R, RT;
+        R << cos(state[2]) ,-sin(state[2]), \
+             sin(state[2]) ,cos(state[2]) ;
+        RT = R.transpose();
         Eigen::Vector2d t(state[0], state[1]);
         for (size_t i=0; i<8; i++)
         {
@@ -218,14 +307,34 @@ namespace ugv_planner
         }
         posToIndexWorld(AABBmin, AABBmin_idx);
         posToIndexWorld(AABBmax, AABBmax_idx);
+        h = 0.16;
+        double h_res = h*0.9;
         for (int i=AABBmin_idx(0); i<=AABBmax_idx(0); i++)
             for (int j=AABBmin_idx(1); j<=AABBmax_idx(1); j++)
                 for (int k=AABBmin_idx(2); k<=AABBmax_idx(2); k++)
                 {
                     Eigen::Vector3i idx(i, j, k);
-                    if (isOccupancyWorld(idx)==1)
+                    Eigen::Vector3d pos;
+                    if (isOccupancyWorld(idx) == 1)
                     {
-                        return false;
+                        indexToPosWorld(idx, pos);
+                        Eigen::Vector4d p(pos[0], pos[1], pos[2], h);
+                        p.block<2, 1>(0, 0) = RT * (p.head(2) - t);
+
+                        double tmp_h = h;
+                        for (; tmp_h>=0; tmp_h-=h_res)
+                        {
+                            p(3) = tmp_h;
+                            if (isOccupancy(p) != 1)
+                            {
+                                h = tmp_h;
+                                break;
+                            }
+                        }
+                        if (tmp_h<0.0)
+                        {
+                            return false;
+                        }
                     }
                 }
 #else
@@ -236,31 +345,36 @@ namespace ugv_planner
 
         pointSearch.x = state[0];
         pointSearch.y = state[1];
-        pointSearch.z = (0.48 + state[3])/2.0;
+        pointSearch.z = 0.32;
         kdtree.radiusSearch(pointSearch, 0.5, pointIdx, pointSquaredDistance);
 
         Eigen::Matrix2d R;
         R << cos(state[2]) , sin(state[2]), \
              -sin(state[2]), cos(state[2]);
+        h = 0.16;
+        double h_res = h_resolution*0.9;
         for (size_t i=0; i<pointIdx.size(); i++)
         {
-            Eigen::Vector4d p(env_cloud->points[i].x, \
-                              env_cloud->points[i].y, \
-                              env_cloud->points[i].z, state[3]);
+            Eigen::Vector4d p(env_cloud->points[pointIdx[i]].x, \
+                              env_cloud->points[pointIdx[i]].y, \
+                              env_cloud->points[pointIdx[i]].z, h);
             p.block<2, 1>(0, 0) = R * (p.head(2) - state.head(2));
-            // std::cout<<"p="<<p.transpose();
-            if (isOccupancy(p) == 1)
+            double tmp_h = h;
+            for (; tmp_h>=0; tmp_h-=h_res)
+            {
+                p(3) = tmp_h;
+                if (isOccupancy(p) != 1)
+                {
+                    h = tmp_h;
+                    break;
+                }
+            }
+            if (tmp_h<0.0)
             {
                 return false;
             }
         }
 #endif
-        return true;
-    }
-
-    inline bool MapManager::isHStateFree(const Eigen::Vector3d& state, double& h)
-    {
-        // TODO
         return true;
     }
 
@@ -355,7 +469,7 @@ namespace ugv_planner
 
     inline void MapManager::indexToPosWorld(const Eigen::Vector3i& id, Eigen::Vector3d& pos)
     {
-        for (int i = 0; i < 3; ++i) pos(i) = (id(i) + 0.5) * world_resolution_inv + world_origin(i);
+        for (int i = 0; i < 3; ++i) pos(i) = (id(i) + 0.5) * world_resolution + world_origin(i);
     }
 
     inline int MapManager::toAddressWorld(const Eigen::Vector3i& id)

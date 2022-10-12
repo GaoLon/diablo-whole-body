@@ -25,7 +25,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: robo_esdf
+    SyncSource: grid_world
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -54,8 +54,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 1.1852062940597534
-        Min Value: 5.973875431664055e-06
+        Max Value: 1.0852062702178955
+        Min Value: 0
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -63,7 +63,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: AxisColor
       Decay Time: 1e+06
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -75,6 +75,34 @@ Visualization Manager:
       Size (m): 0.004999999888241291
       Style: Flat Squares
       Topic: /global_map
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: -9999
+        Min Value: 9999
+        Value: true
+      Axis: Z
+      Channel Name: z
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: grid_world
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.019999999552965164
+      Style: Boxes
+      Topic: /ugv_planner_node/world_cloud
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -248,7 +276,7 @@ Visualization Manager:
       Marker Topic: /kino_astar/wholebody_marker
       Name: kino_astar_path
       Namespaces:
-        {}
+        ugv: true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -276,7 +304,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 18.506105422973633
+      Distance: 4.371326446533203
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -284,17 +312,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 5.808996200561523
-        Y: -0.41449931263923645
-        Z: 0.24584229290485382
+        X: 5.889287948608398
+        Y: -0.9781025648117065
+        Z: 1.3622933626174927
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.3097965717315674
+      Pitch: -0.1152016744017601
       Target Frame: <Fixed Frame>
-      Yaw: 4.279348373413086
+      Yaw: 4.9862542152404785
     Saved: ~
 Window Geometry:
   Displays:
@@ -313,4 +341,4 @@ Window Geometry:
     collapsed: true
   Width: 1853
   X: 606
-  Y: 2572
+  Y: 2461

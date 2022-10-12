@@ -125,6 +125,8 @@ namespace ugv_planner
             //debug
             std::vector<Eigen::Vector3d> model_points;
             std::vector<visualization_msgs::Marker> model;
+            int check_times = 0;
+            double colli_check_time = 0.0;
 
         public:
             KinoAstar() {}
@@ -284,7 +286,11 @@ namespace ugv_planner
                 p(2) += wt;
                 p(2) = normalizeAngle(p(2));
                 fda -= fwt;
-                if (!robo_map->isHStateFree(p.head(3), h))
+                ros::Time t1 = ros::Time::now();
+                bool isfree = robo_map->isHStateFree(p.head(3), h);
+                check_times ++;
+                colli_check_time += (ros::Time::now()-t1).toSec()*1000;
+                if (!isfree)
                 {
                     shot_path.clear();
                     return;
@@ -296,7 +302,11 @@ namespace ugv_planner
             p(2) = direct;
             do
             {
-                if (!robo_map->isHStateFree(p.head(3), h))
+                ros::Time t1 = ros::Time::now();
+                bool isfree = robo_map->isHStateFree(p.head(3), h);
+                check_times ++;
+                colli_check_time += (ros::Time::now()-t1).toSec()*1000;
+                if (!isfree)
                 {
                     shot_path.clear();
                     return;
@@ -317,7 +327,11 @@ namespace ugv_planner
                 p(2) += wt;
                 p(2) = normalizeAngle(p(2));
                 fda -= fwt;
-                if (!robo_map->isHStateFree(p.head(3), h))
+                ros::Time t1 = ros::Time::now();
+                bool isfree = robo_map->isHStateFree(p.head(3), h);
+                check_times ++;
+                colli_check_time += (ros::Time::now()-t1).toSec()*1000;
+                if (!isfree)
                 {
                     shot_path.clear();
                     return;
@@ -338,7 +352,11 @@ namespace ugv_planner
                 p(2) += wt;
                 p(2) = normalizeAngle(p(2));
                 fda -= fwt;
-                if (!robo_map->isHStateFree(p.head(3), h))
+                ros::Time t1 = ros::Time::now();
+                bool isfree = robo_map->isHStateFree(p.head(3), h);
+                check_times ++;
+                colli_check_time += (ros::Time::now()-t1).toSec()*1000;
+                if (!isfree)
                 {
                     shot_path.clear();
                     return;

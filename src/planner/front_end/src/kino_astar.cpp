@@ -38,6 +38,8 @@ namespace ugv_planner
     std::vector<Eigen::Vector4d> KinoAstar::plan(const Eigen::Vector4d& start_state, const Eigen::Vector4d& end_state)
     {
         // reset
+        int check_times = 0;
+        double colli_check_time = 0.0;
         int use_node_num = 0;
         int iter_num = 0;
         std::priority_queue<PathNodePtr, std::vector<PathNodePtr>, NodeComparator> empty_queue;
@@ -62,6 +64,7 @@ namespace ugv_planner
         cur_node->parent = NULL;
         cur_node->state = start_state.head(3);
         cur_node->state(2) = normalizeAngle(cur_node->state(2));
+        cur_node->h = start_state[3];
         stateToIndex(cur_node->state, cur_node->index);
         cur_node->g_score = 0.0;
         cur_node->input = Eigen::Vector2d(0.0, 0.0);
@@ -82,20 +85,18 @@ namespace ugv_planner
 
             if((cur_node->state.head(2) - end_pt.head(2)).norm() < oneshot_range && is_init)
             {
-        // ROS_INFO("ggg");
                 ros::Time t1 = ros::Time::now();
                 asignShotTraj(cur_node->state, end_state);
-        // ROS_INFO("ggok");
                 if (!shot_path.empty())
                 {
                     std::cout << "one-shot time: " << (ros::Time::now()-t1).toSec()*1000 << " ms"<<std::endl;
+                    std::cout << "mean collision check time: " << colli_check_time / check_times << " ms"<<std::endl;
                     std::cout << "all planning time: " << (ros::Time::now()-t0).toSec()*1000 << " ms"<<std::endl;
                     retrievePath(cur_node);
                     visWholeBodyPath();
                     return front_end_path;
                 }
             }
-        // ROS_INFO("4");
 
             open_set.pop();
             cur_node->node_state = CLOSE;
@@ -125,17 +126,14 @@ namespace ugv_planner
 
             for (size_t i=0; i<inputs.size(); i++)
             {
-        // ROS_INFO("5");
                 Eigen::Vector2d input = inputs[i];
                 stateTransit(cur_state, pro_state, input, time_interval);
-        // ROS_INFO("6");
 
                 if (!robo_map->isInMapPlane(cur_state))
                 {
                     std::cout << "[Kino Astar]: out of map range" << std::endl;
                     continue;
                 }
-        // ROS_INFO("7");
 
                 Eigen::Vector3i pro_id;
                 PathNodePtr pro_node;
@@ -147,24 +145,23 @@ namespace ugv_planner
                 {
                     continue;
                 }
-        // ROS_INFO("8");
 
                 Eigen::Vector3d xt;
                 double h = 0.0;
                 bool isfree = true;
                 for (double t = collision_interval; t <= time_interval+1e-3; t+=collision_interval)
                 {
-        // ROS_INFO("s");
                     stateTransit(cur_state, xt, input, t);
+                    ros::Time t1 = ros::Time::now();
                     isfree = robo_map->isHStateFree(xt, h);
-        // ROS_INFO("b");
+                    check_times ++;
+                    colli_check_time += (ros::Time::now()-t1).toSec()*1000;
 
                     if (!isfree)
                         break;
                 }
                 if (!isfree)  
                     continue;
-        // ROS_INFO("9");
 
                 double tmp_g_score = 0.0;
                 double tmp_f_score = 0.0;
@@ -177,7 +174,6 @@ namespace ugv_planner
 
                 if (pro_node == NULL)
                 {
-        // ROS_INFO("10");
                     pro_node = path_node_pool[use_node_num];
                     pro_node->index = pro_id;
                     pro_node->state = pro_state;
@@ -200,7 +196,6 @@ namespace ugv_planner
                 }
                 else if (pro_node->node_state == OPEN)
                 {
-        // ROS_INFO("11");
                     if (tmp_g_score < pro_node->g_score)
                     {
                         pro_node->index = pro_id;

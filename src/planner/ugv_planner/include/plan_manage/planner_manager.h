@@ -62,6 +62,7 @@ namespace ugv_planner
     bool use_replan;
     bool back;
     bool mpc_trigger;
+    int  front_end_type;
 
     geometry_msgs::PoseStamped    target;        
     Eigen::Vector3d               target_pos;    

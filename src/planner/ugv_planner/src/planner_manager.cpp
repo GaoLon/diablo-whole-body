@@ -41,6 +41,7 @@ namespace ugv_planner
 
     nh.param("plan_horizon", plan_horizon, 1.0);
     nh.param("use_replan", use_replan, false);
+    nh.param("front_end_type", front_end_type, 0);
 
     target_sub     = nh.subscribe("/move_base_simple/goal", 1, &UGVPlannerManager::targetRcvCallback, this);
     odom_sub       = nh.subscribe("odom",1 ,&UGVPlannerManager::odomRcvCallback, this);
@@ -56,14 +57,18 @@ namespace ugv_planner
     minco_traj_optimizer -> setEnvironment(robo_map_manager);
     robo_map_manager -> initMap(nh);
     vis_render.init(nh);
-
-    // ompl_manager->setParam(nh);
-    // ompl_manager->setEnvironment(robo_map_manager);
-    // ompl_manager->init();
-
-    kino_astar_manager->setParam(nh);
-    kino_astar_manager->setEnvironment(robo_map_manager);
-    kino_astar_manager->init();
+    if (front_end_type == 0)
+    {
+      ompl_manager->setParam(nh);
+      ompl_manager->setEnvironment(robo_map_manager);
+      ompl_manager->init();
+    }
+    else
+    {
+      kino_astar_manager->setParam(nh);
+      kino_astar_manager->setEnvironment(robo_map_manager);
+      kino_astar_manager->init();
+    }
   }
 
   void UGVPlannerManager::trigRcvCallback(const std_msgs::Bool trig)
@@ -321,22 +326,28 @@ namespace ugv_planner
 
   bool UGVPlannerManager::globalReplan()
   {
-    Eigen::Vector4d begin_p, target_p;
-    begin_p.block<2, 1>(0, 0) = now_pos.head(2);
-    target_p.block<2, 1>(0, 0) = target_pos.head(2);
-    // target_p(0) = 8.0;
-    // target_p(1) = -2.0;
-    begin_p(2) = target_p(2) = 0.0;
-    begin_p(3) = target_p(3) = 0.0;
-    vector<Eigen::Vector4d> front_end_path = kino_astar_manager->plan(begin_p, target_p);
-
-    // Eigen::Matrix<double, 5, 1> begin_p, target_p;
-    // begin_p.block<2, 1>(0, 0) = now_pos.head(2);
-    // target_p.block<2, 1>(0, 0) = target_pos.head(2);
-    // begin_p(2) = target_p(2) = 0.0;
-    // begin_p(3) = target_p(3) = 0.0;
-    // begin_p(4) = target_p(4) = 0.0;
-    // vector<Eigen::Vector4d> front_end_path = ompl_manager->kinoPlan(begin_p, target_p);
+    if (front_end_type == 0)
+    {
+      Eigen::Matrix<double, 6, 1> begin_p, target_p;
+      begin_p.block<2, 1>(0, 0) = now_pos.head(2);
+      target_p.block<2, 1>(0, 0) = target_pos.head(2);
+      begin_p(2) = target_p(2) = 0.0;
+      begin_p(3) = target_p(3) = 0.0;
+      begin_p(4) = target_p(4) = 0.0;
+      begin_p(5) = 0.15;
+      target_p(5) = 0.0;
+      vector<Eigen::Vector4d> front_end_path = ompl_manager->kinoPlan(begin_p, target_p);
+    }
+    else
+    {
+      Eigen::Vector4d begin_p, target_p;
+      begin_p.block<2, 1>(0, 0) = now_pos.head(2);
+      target_p.block<2, 1>(0, 0) = target_pos.head(2);
+      begin_p(2) = target_p(2) = 0.0;
+      begin_p(3) = 0.16;
+      target_p(3) = 0.0;
+      vector<Eigen::Vector4d> front_end_path = kino_astar_manager->plan(begin_p, target_p);
+    }
     
     vector<Eigen::Vector3d> path_0;
 

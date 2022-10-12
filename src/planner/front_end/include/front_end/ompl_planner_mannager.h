@@ -29,7 +29,6 @@
 #include <ompl/control/planners/rrt/RRT.h>
 #include <ompl/control/planners/est/EST.h>
 #include <ompl/control/planners/pdst/PDST.h>
-#include <ompl/control/planners/syclop/GridDecomposition.h>
 #include <ompl/tools/config/MagicConstants.h>
 #include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/OptimizationObjective.h>
@@ -45,24 +44,25 @@ namespace oc = ompl::control;
 
 namespace ugv_planner
 {
-    class MyProjection : public ob::ProjectionEvaluator
+    class DiabloProjection : public ob::ProjectionEvaluator
     {
         public:
         
-        MyProjection(const ob::StateSpacePtr &space) : ob::ProjectionEvaluator(space)
+        DiabloProjection(const ob::StateSpacePtr &space) : ob::ProjectionEvaluator(space)
         {
         }
         
         virtual unsigned int getDimension(void) const
         {
-            return 2;
+            return 3;
         }
         
         virtual void defaultCellSizes(void)
         {
-            cellSizes_.resize(2);
-            cellSizes_[0] = 0.1;
-            cellSizes_[1] = 0.1;
+            cellSizes_.resize(3);
+            cellSizes_[0] = 0.02;
+            cellSizes_[1] = 0.02;
+            cellSizes_[2] = 0.3;
         }
         
         virtual void project(const ob::State *state, Eigen::Ref<Eigen::VectorXd> projection) const
@@ -70,6 +70,7 @@ namespace ugv_planner
             const auto *se2 = state->as<ob::CompoundState>()->as<ob::SE2StateSpace::StateType>(0);
             projection(0) = se2->getX();
             projection(1) = se2->getY();
+            projection(2) = se2->getYaw();
         }
     };
 
@@ -96,7 +97,7 @@ namespace ugv_planner
             void setParam(ros::NodeHandle& nh);
             void init();
             std::vector<Eigen::Vector4d> plan(const Eigen::Vector4d start_state, const Eigen::Vector4d end_state);
-            std::vector<Eigen::Vector4d> kinoPlan(const Eigen::Matrix<double, 5, 1> start_state, const Eigen::Matrix<double, 5, 1> end_state);
+            std::vector<Eigen::Vector4d> kinoPlan(const Eigen::VectorXd start_state, const Eigen::VectorXd end_state);
             bool isStateValid(const ob::State *state);
             bool isHStateValid(const ob::State *state);
             void propaGate(const oc::SpaceInformationPtr si, const ob::State *state, const oc::Control* control, const double duration, ob::State *result);

@@ -5,7 +5,7 @@ namespace ugv_planner
 {
     MapManager::MapManager(): \
         map_size(Eigen::Vector4d(0.8, 0.9, 0.8, 1.08)),\
-        has_esdf(false), env_cloud(new pcl::PointCloud<pcl::PointXYZ>),\
+        has_esdf(false), has_cloud(false), env_cloud(new pcl::PointCloud<pcl::PointXYZ>),\
         world_size(Eigen::Vector3d(18.0, 8.0, 2.0)), world_resolution(0.02)
     { 
         min_boundary = -map_size / 2.0;
@@ -36,6 +36,7 @@ namespace ugv_planner
         vis_timer = node_.createTimer(ros::Duration(1.0), &MapManager::visCallback, this);
         esdf_pub  = node_.advertise<sensor_msgs::PointCloud2>("robo_esdf", 10);
         field_pub = node_.advertise<sensor_msgs::PointCloud2>("robo_field", 10);
+        world_pub = node_.advertise<sensor_msgs::PointCloud2>("world_cloud", 10);
         cloud_sub = node_.subscribe<sensor_msgs::PointCloud2>("/global_map", 10, &MapManager::cloudCallback, this);
 
         resolution_inv = 1.0 / resolution;
@@ -93,6 +94,8 @@ namespace ugv_planner
     {
         if (!has_cloud)
         {
+            has_cloud = true;
+
             pcl::PointCloud<pcl::PointXYZ>::Ptr cloudMap(new pcl::PointCloud<pcl::PointXYZ>);
             pcl::VoxelGrid<pcl::PointXYZ> DwzFilter;
         
@@ -118,7 +121,6 @@ namespace ugv_planner
             }
 
             ROS_INFO("get point clouds.");
-            has_cloud = true;
         }
 
         return;
@@ -129,62 +131,87 @@ namespace ugv_planner
         if (!has_esdf || debug_h < 0.0 || debug_h > 0.16)
             return;
 
-        // robo esdf vis
-        pcl::PointCloud<pcl::PointXYZI> cloud;
-        pcl::PointXYZI pt;
-        for (int x=min_idx[0]; x<=max_idx[0]; x++)
-            for (int y=min_idx[1]; y<=max_idx[1]; y++)
-                for (int z=min_idx[2]; z<=max_idx[2]; z++)
-                {
-                    if (robo_buffer[toAddress(x, y, z, debug_h_idx)] == 1)
-                    {
-                        pt.x = x;
-                        pt.y = y;
-                        pt.z = z;
-                        pt.intensity = esdf_buffer_all[toAddress(x, y, z, debug_h_idx)];
-                        cloud.push_back(pt);
-                    }
-                }
-        cloud.width = cloud.points.size();
-        cloud.height = 1;
-        cloud.is_dense = true;
-        cloud.header.frame_id = "world";
-        sensor_msgs::PointCloud2 cloud_msg;
-        pcl::toROSMsg(cloud, cloud_msg);
-        esdf_pub.publish(cloud_msg);
+        // // robo esdf vis
+        // pcl::PointCloud<pcl::PointXYZI> cloud;
+        // pcl::PointXYZI pt;
+        // for (int x=min_idx[0]; x<=max_idx[0]; x++)
+        //     for (int y=min_idx[1]; y<=max_idx[1]; y++)
+        //         for (int z=min_idx[2]; z<=max_idx[2]; z++)
+        //         {
+        //             if (robo_buffer[toAddress(x, y, z, debug_h_idx)] == 1)
+        //             {
+        //                 pt.x = x;
+        //                 pt.y = y;
+        //                 pt.z = z;
+        //                 pt.intensity = esdf_buffer_all[toAddress(x, y, z, debug_h_idx)];
+        //                 cloud.push_back(pt);
+        //             }
+        //         }
+        // cloud.width = cloud.points.size();
+        // cloud.height = 1;
+        // cloud.is_dense = true;
+        // cloud.header.frame_id = "world";
+        // sensor_msgs::PointCloud2 cloud_msg;
+        // pcl::toROSMsg(cloud, cloud_msg);
+        // esdf_pub.publish(cloud_msg);
 
         // robo field vis
-        pcl::PointCloud<pcl::PointXYZI> cloud_field;
-        pcl::PointXYZI pt_field;
-        double dist;
-        Eigen::Vector3d esdf_field;
-        for (double x=min_boundary(0); x<=max_boundary(0); x+=0.01)
-            for (double y=min_boundary(1); y<=max_boundary(1); y+=0.01)
-                for (double z=min_boundary(2); z<=max_boundary(2); z+=0.01)
+        // pcl::PointCloud<pcl::PointXYZI> cloud_field;
+        // pcl::PointXYZI pt_field;
+        // double dist;
+        // Eigen::Vector3d esdf_field;
+        // for (double x=min_boundary(0); x<=max_boundary(0); x+=0.01)
+        //     for (double y=min_boundary(1); y<=max_boundary(1); y+=0.01)
+        //         for (double z=min_boundary(2); z<=max_boundary(2); z+=0.01)
+        //         {
+        //             Eigen::Vector4d pos(x, y, z, debug_h);
+        //             Eigen::Vector4i idx;
+        //             if (isInMap(pos))
+        //             {
+        //                 getDistWithGrad(pos, dist, esdf_field);
+        //                 posToIndex(pos, idx);
+        //                 if (robo_buffer[toAddress(idx)] == 1)
+        //                 {
+        //                     pt_field.x = x;
+        //                     pt_field.y = y;
+        //                     pt_field.z = z + 1.0;
+        //                     pt_field.intensity = dist;
+        //                     cloud_field.push_back(pt_field);
+        //                 }
+        //             }
+        //         }
+        // cloud_field.width = cloud_field.points.size();
+        // cloud_field.height = 1;
+        // cloud_field.is_dense = true;
+        // cloud_field.header.frame_id = "world";
+        // sensor_msgs::PointCloud2 cloud_msg_field;
+        // pcl::toROSMsg(cloud_field, cloud_msg_field);
+        // field_pub.publish(cloud_msg_field);
+        
+        // world grid map vis
+        pcl::PointCloud<pcl::PointXYZ> grid_map_world;
+        pcl::PointXYZ pt_world;
+        for (int x=0; x<world_voxel_num[0]; x++)
+            for (int y=0; y<world_voxel_num[1]; y++)
+                for (int z=0; z<world_voxel_num[2]; z++)
                 {
-                    Eigen::Vector4d pos(x, y, z, debug_h);
-                    Eigen::Vector4i idx;
-                    if (isInMap(pos))
+                    if (world_buffer[toAddressWorld(x, y, z)] == 1)
                     {
-                        getDistWithGrad(pos, dist, esdf_field);
-                        posToIndex(pos, idx);
-                        if (robo_buffer[toAddress(idx)] == 1)
-                        {
-                            pt_field.x = x;
-                            pt_field.y = y;
-                            pt_field.z = z + 1.0;
-                            pt_field.intensity = dist;
-                            cloud_field.push_back(pt_field);
-                        }
+                        Eigen::Vector3d world_p;
+                        indexToPosWorld(Eigen::Vector3i(x, y, z), world_p);
+                        pt_world.x = world_p(0);
+                        pt_world.y = world_p(1);
+                        pt_world.z = world_p(2);
+                        grid_map_world.push_back(pt_world);
                     }
                 }
-        cloud_field.width = cloud_field.points.size();
-        cloud_field.height = 1;
-        cloud_field.is_dense = true;
-        cloud_field.header.frame_id = "world";
-        sensor_msgs::PointCloud2 cloud_msg_field;
-        pcl::toROSMsg(cloud_field, cloud_msg_field);
-        field_pub.publish(cloud_msg_field);
+        grid_map_world.width = grid_map_world.points.size();
+        grid_map_world.height = 1;
+        grid_map_world.is_dense = true;
+        grid_map_world.header.frame_id = "world";
+        sensor_msgs::PointCloud2 cloud_msg_world;
+        pcl::toROSMsg(grid_map_world, cloud_msg_world);
+        world_pub.publish(cloud_msg_world);
     }
 
     template <typename F_get_val, typename F_set_val>
